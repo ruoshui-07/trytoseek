@@ -39,16 +39,22 @@
   </div>
 
   <!-- 库和脚本放在底部 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
+<script>
     // ====== 配置：替换成你自己的 Supabase 凭证 ======
     const SUPABASE_URL = 'https://verrithqsanxnhrtwjps.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlcnJpdGhxc2FueG5ocnR3anBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0OTc4MjMsImV4cCI6MjEwMjA3MzgyM30.pm8PZKgNyhQsExsu4vHT3BdbgP8bME8iA7nO8BXvle0';
     const ADMIN_PASSWORD = 'chattjb-admin'; // 简单口令保护
     // ================================================
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
+    // 使用 try-catch 保护初始化，防止报错阻断
+    let supabase;
+    try {
+        supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (err) {
+        console.error("Supabase 初始化失败:", err);
+        supabase = {}; // 防止后续代码因 undefined 报错
+    }
+
     function adminLogin() {
       const pass = document.getElementById('adminPass').value;
       if (pass === ADMIN_PASSWORD) {
@@ -62,10 +68,16 @@
     }
 
     async function loadMessages() {
+      if (!supabase.rpc) {
+        document.getElementById('messageList').innerHTML = '数据库连接失败，请检查配置';
+        return;
+      }
+
       const { data, error } = await supabase.rpc('get_pending_messages');
       
       if (error) {
         console.error(error);
+        // 如果 RPC 报错，尝试直接查询（需要调整 RLS 策略）
         const { data: data2, error: error2 } = await supabase
           .from('messages')
           .select('*')
@@ -109,6 +121,10 @@
     }
 
     async function sendReply(messageId) {
+      if (!supabase.from) {
+        alert('数据库连接失败');
+        return;
+      }
       const replyText = document.getElementById(`reply-${messageId}`).value.trim();
       if (!replyText) return;
       
