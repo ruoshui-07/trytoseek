@@ -1,280 +1,231 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>trytoseek - 登录</title>
-<style>
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7f7f8;margin:0}
-.header{text-align:center;background:white;padding:20px;border-bottom:1px solid #eee}
-.chat{max-width:720px;margin:auto;padding:20px 20px 160px}
-.msg{display:flex;margin-bottom:16px}
-.user{justify-content:flex-end}.assistant{justify-content:flex-start}
-.bubble{padding:12px 16px;border-radius:16px;max-width:75%;line-height:1.5}
-.user .bubble{background:#10a37f;color:white}.assistant .bubble{background:white;border:1px solid #ddd}
-.input{position:fixed;bottom:0;left:0;right:0;background:white;padding:15px;display:flex;gap:8px;flex-wrap:wrap}
-.input input{padding:10px;border:1px solid #ddd;border-radius:8px;flex:1}
-#name{max-width:150px}
-button{background:#10a37f;color:white;border:0;border-radius:8px;padding:10px 20px;cursor:pointer}
-.auth-box{max-width:400px;margin:40px auto;padding:20px;background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.1)}
-.auth-box h2{text-align:center}
-.auth-box input{width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:6px;box-sizing:border-box}
-.auth-box button{width:100%;margin-top:10px}
-.toggle-link{text-align:center;margin-top:12px;color:#10a37f;cursor:pointer}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrytoSeek - 互动聊天</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+    <style>
+        body { font-family: sans-serif; max-width: 700px; margin: auto; padding: 20px; background: #f0f2f5; }
+        .container { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .header { text-align: center; margin-bottom: 20px; }
+        .chat-box { height: 450px; overflow-y: auto; border: 1px solid #e8e8e8; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
+        .message { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
+        .meta { font-size: 12px; color: #888; }
+        .content { margin: 6px 0; line-height: 1.6; }
+        .reply { background: #e6f7ff; padding: 8px 12px; border-radius: 6px; margin-top: 8px; }
+        .status { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; }
+        .pending { background: #fffbe6; color: #faad14; }
+        .replied { background: #e6fffb; color: #1890ff; }
+        .auth-form { max-width: 380px; margin: 80px auto; text-align: center; }
+        .auth-form input { width: 90%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; }
+        .auth-form button { width: 96%; padding: 12px; background: #1890ff; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .hidden { display: none; }
+        .input-area { display: flex; gap: 10px; }
+        .input-area input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; }
+        .input-area button { padding: 12px 24px; background: #1890ff; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .toggle-auth { margin-top: 12px; color: #1890ff; cursor: pointer; font-size: 14px; }
+        .error { color: red; font-size: 13px; margin-top: 8px; }
+    </style>
 </head>
 <body>
-<div class="header"><h2>trytoseek</h2><p>由 AI 驱动的聊天空间</p></div>
 
-<!-- 登录/注册区域 -->
-<div id="authArea" class="auth-box">
-  <h2 id="authTitle">登录</h2>
-  <input id="authEmail" type="email" placeholder="邮箱">
-  <input id="authPassword" type="password" placeholder="密码">
-  <button id="authSubmit">登录</button>
-  <div class="toggle-link" id="toggleAuth">没有账号？注册</div>
-  <div id="authMessage" style="color:red;margin-top:8px"></div>
+<div id="authArea" class="auth-form">
+    <h2>TrytoSeek</h2>
+    <p>登录后即可开始聊天</p>
+    <input id="authEmail" type="email" placeholder="邮箱">
+    <input id="authPassword" type="password" placeholder="密码">
+    <button id="authBtn">登录</button>
+    <div class="toggle-auth" id="toggleText">没有账号？注册</div>
+    <div class="error" id="authError"></div>
 </div>
 
-<!-- 聊天区域（初始隐藏） -->
-<div id="chatArea" style="display:none">
-  <div id="chat" class="chat"></div>
-  <div class="input">
-    <input id="name" placeholder="昵称（可选）">
-    <input id="text" placeholder="输入消息">
-    <button id="send">发送</button>
-  </div>
+<div id="app" class="container hidden">
+    <div class="header">
+        <h3>欢迎，<span id="userEmail"></span></h3>
+        <button onclick="signOut()" style="background:#999;color:white;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;">退出</button>
+    </div>
+    <div class="chat-box" id="messages"></div>
+    <div class="input-area">
+        <input type="text" id="msgInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter') send()">
+        <button onclick="send()">发送</button>
+    </div>
 </div>
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/+esm";
+<script>
+    // ---- Supabase 配置 ----
+    const SUPABASE_URL = 'https://verrithqsanxnhrtwjps.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlcnJpdGhxc2FueG5ocnR3anBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0OTc4MjMsImV4cCI6MjEwMjA3MzgyM30.pm8PZKgNyhQsExsu4vHT3BdbgP8bME8iA7nO8BXvle0';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const URL = "https://verrithqsanxnhrtwjps.supabase.co";
-const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlcnJpdGhxc2FueG5ocnR3anBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0OTc4MjMsImV4cCI6MjEwMjA3MzgyM30.pm8PZKgNyhQsExsu4vHT3BdbgP8bME8iA7nO8BXvle0";
-const supabase = createClient(URL, KEY);
+    // ---- DOM 元素 ----
+    const authArea = document.getElementById('authArea');
+    const appDiv = document.getElementById('app');
+    const authEmail = document.getElementById('authEmail');
+    const authPassword = document.getElementById('authPassword');
+    const authBtn = document.getElementById('authBtn');
+    const toggleText = document.getElementById('toggleText');
+    const authError = document.getElementById('authError');
+    const userEmailSpan = document.getElementById('userEmail');
+    const messagesDiv = document.getElementById('messages');
+    const msgInput = document.getElementById('msgInput');
 
-// ---------- DOM 元素 ----------
-const authArea = document.getElementById("authArea");
-const chatArea = document.getElementById("chatArea");
-const authTitle = document.getElementById("authTitle");
-const authEmail = document.getElementById("authEmail");
-const authPassword = document.getElementById("authPassword");
-const authSubmit = document.getElementById("authSubmit");
-const toggleLink = document.getElementById("toggleAuth");
-const authMessage = document.getElementById("authMessage");
-const chatDiv = document.getElementById("chat");
-const nameInput = document.getElementById("name");
-const textInput = document.getElementById("text");
-const sendBtn = document.getElementById("send");
+    let isRegister = false;
+    let currentUser = null;
 
-let isRegister = false; // 当前是注册模式还是登录模式
-let currentUser = null;
-
-// ---------- 辅助函数 ----------
-function escapeHtml(t) {
-  const e = document.createElement("div");
-  e.textContent = t;
-  return e.innerHTML;
-}
-
-function addMessage(role, text) {
-  const div = document.createElement("div");
-  div.className = "msg " + role;
-  div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
-  chatDiv.appendChild(div);
-  window.scrollTo(0, document.body.scrollHeight);
-}
-
-// 从 localStorage 恢复聊天记录
-function restoreChatHistory() {
-  const saved = localStorage.getItem("chatHistory");
-  if (saved) {
-    try {
-      const msgs = JSON.parse(saved);
-      msgs.forEach(m => addMessage(m.role, m.text));
-    } catch (e) {}
-  }
-}
-
-// 保存聊天记录到 localStorage
-function saveChatHistory(role, text) {
-  let history = [];
-  const saved = localStorage.getItem("chatHistory");
-  if (saved) try { history = JSON.parse(saved); } catch(e) {}
-  history.push({ role, text });
-  localStorage.setItem("chatHistory", JSON.stringify(history));
-}
-
-// ---------- 登录/注册 ----------
-async function handleAuth() {
-  const email = authEmail.value.trim();
-  const password = authPassword.value.trim();
-  if (!email || !password) {
-    authMessage.textContent = "请填写邮箱和密码";
-    return;
-  }
-  authMessage.textContent = "";
-  authSubmit.disabled = true;
-  authSubmit.textContent = "处理中...";
-
-  try {
-    let result;
-    if (isRegister) {
-      result = await supabase.auth.signUp({ email, password });
-    } else {
-      result = await supabase.auth.signInWithPassword({ email, password });
+    // ---- 辅助函数 ----
+    function showAuth() {
+        authArea.classList.remove('hidden');
+        appDiv.classList.add('hidden');
     }
 
-    if (result.error) {
-      authMessage.textContent = result.error.message;
-      authSubmit.disabled = false;
-      authSubmit.textContent = isRegister ? "注册" : "登录";
-      return;
+    function showApp(user) {
+        authArea.classList.add('hidden');
+        appDiv.classList.remove('hidden');
+        userEmailSpan.textContent = user.email;
+        loadMessages();
     }
 
-    // 注册成功后自动登录（confirm email 关闭的情况下）
-    if (isRegister && result.data.user) {
-      // 注册成功，自动登录
-      await supabase.auth.signInWithPassword({ email, password });
+    // ---- 登录 / 注册 ----
+    async function handleAuth() {
+        const email = authEmail.value.trim();
+        const password = authPassword.value.trim();
+        if (!email || !password) {
+            authError.textContent = '请填写邮箱和密码';
+            return;
+        }
+        authError.textContent = '';
+        authBtn.disabled = true;
+        authBtn.textContent = '处理中...';
+
+        try {
+            let result;
+            if (isRegister) {
+                result = await supabase.auth.signUp({ email, password });
+                if (result.error) throw result.error;
+                // 注册成功后自动登录（需关闭 confirm email）
+                await supabase.auth.signInWithPassword({ email, password });
+            } else {
+                result = await supabase.auth.signInWithPassword({ email, password });
+                if (result.error) throw result.error;
+            }
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                currentUser = user;
+                showApp(user);
+            } else {
+                authError.textContent = '登录失败，请稍后重试';
+            }
+        } catch (err) {
+            authError.textContent = err.message;
+        } finally {
+            authBtn.disabled = false;
+            authBtn.textContent = isRegister ? '注册' : '登录';
+        }
     }
 
-    currentUser = result.data.user;
-    if (!currentUser) {
-      // 可能是需要确认邮箱，提示用户
-      authMessage.textContent = "注册成功，请检查邮箱确认后登录";
-      authSubmit.disabled = false;
-      authSubmit.textContent = "注册";
-      return;
-    }
-
-    // 登录成功，切换界面
-    authArea.style.display = "none";
-    chatArea.style.display = "block";
-    initChat();
-  } catch (err) {
-    authMessage.textContent = err.message;
-  } finally {
-    authSubmit.disabled = false;
-    authSubmit.textContent = isRegister ? "注册" : "登录";
-  }
-}
-
-// 切换登录/注册
-toggleLink.addEventListener("click", () => {
-  isRegister = !isRegister;
-  authTitle.textContent = isRegister ? "注册" : "登录";
-  authSubmit.textContent = isRegister ? "注册" : "登录";
-  toggleLink.textContent = isRegister ? "已有账号？登录" : "没有账号？注册";
-  authMessage.textContent = "";
-});
-
-authSubmit.addEventListener("click", handleAuth);
-
-// ---------- 聊天初始化 ----------
-async function initChat() {
-  // 清除旧的聊天记录（准备加载服务器数据）
-  chatDiv.innerHTML = "";
-  localStorage.removeItem("chatHistory");
-
-  // 加载当前用户的历史消息
-  const { data: messages, error } = await supabase
-    .from("messages")
-    .select("id, content, reply, created_at")
-    .eq("user_id", currentUser.id)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error("加载历史消息失败:", error);
-  } else if (messages) {
-    messages.forEach(msg => {
-      addMessage("user", msg.content);
-      if (msg.reply) {
-        addMessage("assistant", msg.reply);
-      }
-      // 保存到 localStorage 以便离线查看
-      saveChatHistory("user", msg.content);
-      if (msg.reply) saveChatHistory("assistant", msg.reply);
+    // 切换登录/注册
+    toggleText.addEventListener('click', () => {
+        isRegister = !isRegister;
+        authBtn.textContent = isRegister ? '注册' : '登录';
+        toggleText.textContent = isRegister ? '已有账号？登录' : '没有账号？注册';
+        authError.textContent = '';
     });
-  }
 
-  // 启动轮询（每3秒检查是否有新回复）
-  setInterval(pollReplies, 3000);
-}
+    authBtn.addEventListener('click', handleAuth);
 
-// 轮询未回复的消息
-let pendingIds = [];
+    // 退出登录
+    async function signOut() {
+        await supabase.auth.signOut();
+        location.reload();
+    }
 
-async function pollReplies() {
-  if (!currentUser || pendingIds.length === 0) return;
+    // ---- 加载消息 ----
+    async function loadMessages() {
+        const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .order('created_at', { ascending: true });
 
-  const { data, error } = await supabase
-    .from("messages")
-    .select("id, reply")
-    .in("id", pendingIds)
-    .not("reply", "is", null);
+        if (error) {
+            console.error('加载消息失败:', error);
+            return;
+        }
 
-  if (error) return;
+        messagesDiv.innerHTML = '';
+        data.forEach(msg => {
+            const div = document.createElement('div');
+            div.className = 'message';
+            div.innerHTML = `
+                <div class="meta">${msg.user_name || '匿名'} · ${new Date(msg.created_at).toLocaleString()}</div>
+                <div class="content">${escapeHtml(msg.content)}</div>
+                ${msg.reply ? `<div class="reply"><strong>回复：</strong>${escapeHtml(msg.reply)}</div>` : '<span class="status pending">待回复</span>'}
+            `;
+            messagesDiv.appendChild(div);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
 
-  data?.forEach(msg => {
-    addMessage("assistant", msg.reply);
-    saveChatHistory("assistant", msg.reply);
-    pendingIds = pendingIds.filter(id => id !== msg.id);
-  });
-}
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
-// 发送消息
-async function sendMessage() {
-  const text = textInput.value.trim();
-  if (!text) return;
+    // ---- 发送消息 ----
+    async function send() {
+        const content = msgInput.value.trim();
+        if (!content) return;
 
-  const name = nameInput.value.trim() || currentUser?.email || "匿名访客";
-  addMessage("user", text);
-  saveChatHistory("user", text);
-  textInput.value = "";
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            alert('登录已过期，请重新登录');
+            showAuth();
+            return;
+        }
 
-  const { data, error } = await supabase
-    .from("messages")
-    .insert([
-      { 
-        user_name: name, 
-        content: text, 
-        user_id: currentUser.id 
-      }
-    ])
-    .select();
+        const { error } = await supabase
+            .from('messages')
+            .insert([{ 
+                user_name: user.email, 
+                content: content, 
+                user_id: user.id 
+            }]);
 
-  if (error) {
-    console.error("发送失败:", error);
-    alert("发送失败：" + error.message);
-    return;
-  }
+        if (error) {
+            alert('发送失败：' + error.message);
+            return;
+        }
 
-  // 记录这条消息的 id 用于轮询
-  if (data && data[0]) {
-    pendingIds.push(data[0].id);
-  }
-}
+        msgInput.value = '';
+        loadMessages();
+    }
 
-sendBtn.addEventListener("click", sendMessage);
-textInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") sendMessage();
-});
+    // ---- 自动轮询（每3秒检查新回复）----
+    setInterval(loadMessages, 3000);
 
-// ---------- 检查是否已经登录（session 恢复）----------
-async function checkSession() {
-  const { data: { session }, error } = await supabase.auth.getSession();
-  if (session?.user) {
-    currentUser = session.user;
-    authArea.style.display = "none";
-    chatArea.style.display = "block";
-    initChat();
-  } else {
-    // 尝试从 localStorage 恢复聊天记录（离线显示）
-    restoreChatHistory();
-  }
-}
+    // ---- 初始化：检查登录状态 ----
+    (async function init() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            currentUser = session.user;
+            showApp(session.user);
+        } else {
+            showAuth();
+        }
+    })();
 
-checkSession();
+    // 监听登录状态变化（多标签同步）
+    supabase.auth.onAuthStateChange((event, session) => {
+        if (session) {
+            currentUser = session.user;
+            showApp(session.user);
+        } else {
+            currentUser = null;
+            showAuth();
+        }
+    });
 </script>
 </body>
 </html>
