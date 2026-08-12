@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>trytossek</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f7f7f8; }
@@ -30,7 +29,7 @@
 </head>
 <body>
   <div class="header">
-    <h1> trytoseek</h1>
+    <h1>trytoseek</h1>
     <p>由 AI 驱动的领先聊天界面（*AI = Average Individual）</p>
   </div>
 
@@ -48,18 +47,19 @@
     </div>
   </div>
 
+  <!-- 库和脚本放在底部 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // ====== 配置：替换成你自己的 Supabase 凭证 ======
     const SUPABASE_URL = 'https://verrithqsanxnhrtwjps.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlcnJpdGhxc2FueG5ocnR3anBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0OTc4MjMsImV4cCI6MjEwMjA3MzgyM30.pm8PZKgNyhQsExsu4vHT3BdbgP8bME8iA7nO8BXvle0';
     // ================================================
 
-    supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
-    let myMessages = []; // 存储当前访客发送过的消息ID
+    let myMessages = [];
     let pollTimer = null;
 
-    // 发送消息
     async function sendMessage() {
       const input = document.getElementById('userInput');
       const nameInput = document.getElementById('userName');
@@ -68,13 +68,11 @@
 
       const userName = nameInput.value.trim() || '匿名访客';
       
-      // 显示在聊天界面
       addMessageToChat('user', text);
       input.value = '';
       document.getElementById('sendBtn').disabled = true;
       showTypingIndicator();
 
-      // 插入数据库
       const { data, error } = await supabase
         .from('messages')
         .insert([{ user_name: userName, content: text }])
@@ -88,18 +86,15 @@
         return;
       }
 
-      // 记录这条消息的ID，用于后续轮询回复
       myMessages.push(data[0].id);
       removeTypingIndicator();
       document.getElementById('sendBtn').disabled = false;
 
-      // 开始轮询回复
       if (!pollTimer) {
         pollTimer = setInterval(pollReplies, 3000);
       }
     }
 
-    // 轮询回复
     async function pollReplies() {
       if (myMessages.length === 0) return;
 
@@ -114,19 +109,16 @@
       data.forEach(msg => {
         if (msg.reply) {
           addMessageToChat('assistant', msg.reply);
-          // 从待轮询列表移除
           myMessages = myMessages.filter(id => id !== msg.id);
         }
       });
 
-      // 如果所有消息都有回复了，停止轮询
       if (myMessages.length === 0 && pollTimer) {
         clearInterval(pollTimer);
         pollTimer = null;
       }
     }
 
-    // UI 辅助函数
     function addMessageToChat(role, text) {
       const container = document.getElementById('chatContainer');
       const div = document.createElement('div');
@@ -157,12 +149,10 @@
       return div.innerHTML;
     }
 
-    // 回车发送
     document.getElementById('userInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendMessage();
     });
 
-    // 页面加载时，如果有历史消息ID存在localStorage，恢复轮询
     window.addEventListener('load', () => {
       const saved = localStorage.getItem('myMessages');
       if (saved) {
@@ -173,7 +163,6 @@
       }
     });
 
-    // 保存消息ID到localStorage
     setInterval(() => {
       localStorage.setItem('myMessages', JSON.stringify(myMessages));
     }, 5000);
