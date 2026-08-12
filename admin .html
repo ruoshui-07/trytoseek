@@ -2,133 +2,146 @@
 <html lang="zh-CN">
 
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>ChatTJB 管理后台</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
 <style>
 
-*{
-    box-sizing:border-box;
-}
-
 body{
-    margin:0;
-    padding:20px;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    background:#f5f5f5;
-}
 
+font-family:
+Arial,
+"Microsoft YaHei",
+sans-serif;
 
-.container{
-    max-width:900px;
-    margin:auto;
-}
+background:#f5f5f5;
 
-
-.login-box{
-
-    background:white;
-    padding:30px;
-    border-radius:15px;
-    max-width:400px;
-    margin:100px auto;
+padding:20px;
 
 }
+
+
+
+.box{
+
+background:white;
+
+padding:25px;
+
+border-radius:15px;
+
+max-width:900px;
+
+margin:auto;
+
+}
+
 
 
 input{
 
-    width:100%;
-    padding:12px;
-    border:1px solid #ddd;
-    border-radius:8px;
-    margin:15px 0;
+width:100%;
+
+padding:12px;
+
+margin:15px 0;
+
+border:1px solid #ddd;
+
+border-radius:8px;
 
 }
+
 
 
 button{
 
-    background:#10a37f;
-    color:white;
-    border:none;
-    padding:10px 20px;
-    border-radius:8px;
-    cursor:pointer;
+background:#10a37f;
+
+color:white;
+
+border:none;
+
+padding:10px 20px;
+
+border-radius:8px;
+
+cursor:pointer;
 
 }
 
-
-.header{
-
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-
-}
 
 
 .card{
 
-    background:white;
-    padding:20px;
-    margin-top:15px;
-    border-radius:12px;
+background:#fff;
+
+margin-top:15px;
+
+padding:20px;
+
+border-radius:12px;
+
+box-shadow:0 2px 8px #ddd;
 
 }
 
 
-.meta{
 
-    color:#888;
-    font-size:13px;
+.time{
+
+color:#888;
+
+font-size:13px;
+
+}
+
+
+
+.content{
+
+margin:15px 0;
+
+font-size:16px;
 
 }
 
-
-.message{
-
-    margin:15px 0;
-    font-size:16px;
-
-}
 
 
 textarea{
 
-    width:100%;
-    min-height:80px;
-    padding:10px;
-    border-radius:8px;
-    border:1px solid #ddd;
+width:100%;
+
+height:80px;
+
+padding:10px;
 
 }
+
 
 
 .reply{
 
-    margin-top:10px;
+color:#10a37f;
 
 }
 
-
-.done{
-
-    color:#10a37f;
-
-}
 
 
 .pending{
 
-    color:#f97316;
+color:#f97316;
 
 }
 
 
 </style>
+
 
 </head>
 
@@ -137,26 +150,32 @@ textarea{
 <body>
 
 
-<div class="container">
+<div class="box">
 
 
-<!-- 登录 -->
+<!-- 登录区域 -->
 
-<div id="loginBox" class="login-box">
+<div id="loginArea">
 
-<h2>
+
+<h1>
 🔐 管理员登录
-</h2>
+</h1>
 
 
 <input
-id="passwordInput"
+
+id="password"
+
 type="password"
-placeholder="请输入管理员密码">
+
+placeholder="输入管理员密码">
 
 
-<button id="loginButton">
+<button id="loginBtn">
+
 登录
+
 </button>
 
 
@@ -165,31 +184,25 @@ placeholder="请输入管理员密码">
 
 
 
-<!-- 后台 -->
+<!-- 后台区域 -->
 
 
-<div id="adminBox" style="display:none;">
+<div id="adminArea" style="display:none">
 
-
-<div class="header">
 
 <h1>
 🛠 ChatTJB 管理后台
 </h1>
 
 
-<button id="refreshButton">
+<button id="refreshBtn">
+
 刷新
+
 </button>
 
 
-</div>
-
-
-<div id="messageList">
-
-</div>
-
+<div id="list">
 
 </div>
 
@@ -197,6 +210,8 @@ placeholder="请输入管理员密码">
 
 </div>
 
+
+</div>
 
 
 
@@ -205,103 +220,111 @@ placeholder="请输入管理员密码">
 
 
 import {
+
 createClient
+
 }
+
 from
+
 "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 
 
-// =========================
+
+//================
 // Supabase配置
-// =========================
+//================
 
 
-const SUPABASE_URL =
+const URL =
+
 "https://verrithqsanxnhrtwjps.supabase.co";
 
 
-const SUPABASE_KEY =
+
+const KEY =
+
 "nR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlcnJpdGhxc2FueG5ocnR3anBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0OTc4MjMsImV4cCI6MjEwMjA3MzgyM30.pm8PZKgNyhQsExsu4vHT3BdbgP8bME8iA7nO8BXvle0";
 
 
 
 const supabase =
+
 createClient(
-SUPABASE_URL,
-SUPABASE_KEY
+URL,
+KEY
 );
 
 
 
-
-// 管理密码
+//管理员密码
 
 const ADMIN_PASSWORD =
+
 "chattjb-admin";
 
 
 
 
 
-// 获取元素
-
-const loginBox =
-document.getElementById("loginBox");
+//获取元素
 
 
-const adminBox =
-document.getElementById("adminBox");
+const loginArea =
+document.getElementById("loginArea");
 
 
-const passwordInput =
-document.getElementById("passwordInput");
+const adminArea =
+document.getElementById("adminArea");
 
 
-const loginButton =
-document.getElementById("loginButton");
+const loginBtn =
+document.getElementById("loginBtn");
 
 
-const messageList =
-document.getElementById("messageList");
+const password =
+document.getElementById("password");
 
 
+const list =
+document.getElementById("list");
 
-const refreshButton =
-document.getElementById("refreshButton");
 
-
+const refreshBtn =
+document.getElementById("refreshBtn");
 
 
 
-// 登录
 
 
-loginButton.onclick=function(){
+//登录
 
 
-    if(
-    passwordInput.value === ADMIN_PASSWORD
-    ){
+loginBtn.onclick=function(){
 
 
-        loginBox.style.display="none";
-
-        adminBox.style.display="block";
+if(password.value===ADMIN_PASSWORD){
 
 
-        loadMessages();
+loginArea.style.display="none";
 
 
-    }
-    else{
+adminArea.style.display="block";
 
 
-        alert("密码错误");
+loadMessages();
 
 
-    }
+}
 
+else{
+
+
+alert("密码错误");
+
+
+}
 
 
 };
@@ -312,20 +335,14 @@ loginButton.onclick=function(){
 
 
 
-// 加载消息
+//读取消息
 
 
 async function loadMessages(){
 
 
 
-const {
-data,
-error
-
-}
-=
-await supabase
+const result = await supabase
 
 .from("messages")
 
@@ -340,13 +357,11 @@ ascending:false
 
 
 
+if(result.error){
 
 
-if(error){
-
-
-messageList.innerHTML =
-"<p>数据库错误："+error.message+"</p>";
+list.innerHTML =
+"数据库错误："+result.error.message;
 
 
 return;
@@ -356,100 +371,116 @@ return;
 
 
 
-
-
-
-messageList.innerHTML="";
-
+list.innerHTML="";
 
 
 
 
-data.forEach(
-msg=>{
+result.data.forEach(function(msg){
 
 
-const card =
+
+let div =
 document.createElement("div");
 
 
-card.className="card";
+
+div.className="card";
 
 
 
-card.innerHTML=`
-
-
-<div class="meta">
-
-👤 ${msg.user_name || "匿名访客"}
-
-<br>
-
-🕒 ${new Date(msg.created_at).toLocaleString()}
-
-</div>
-
-
-<div class="message">
-
-${msg.content}
-
-</div>
+let html="";
 
 
 
-${
-msg.reply
+html +=
 
-?
+"<div class='time'>👤 "
 
-`
++(msg.user_name || "匿名访客")
 
-<div class="done">
++"<br>🕒 "
 
-✅ 已回复：
++new Date(msg.created_at).toLocaleString()
 
-${msg.reply}
-
-</div>
-
-`
-
-:
-
-`
-
-<div class="pending">
-
-⏳ 等待回复
-
-</div>
++"</div>";
 
 
-<textarea id="reply-${msg.id}" placeholder="输入回复"></textarea>
+
+html +=
+
+"<div class='content'>"
+
++escapeHtml(msg.content)
+
++"</div>";
 
 
-<div class="reply">
 
-<button data-id="${msg.id}">
+
+
+if(msg.reply){
+
+
+html +=
+
+"<div class='reply'>"
+
++"✅ 回复："
+
++escapeHtml(msg.reply)
+
++"</div>";
+
+
+
+}
+
+else{
+
+
+
+html +=
+
+"<div class='pending'>"
+
++"⏳ 等待回复"
+
++"</div>";
+
+
+
+html +=
+
+"<textarea id='reply_"+msg.id+"' placeholder='输入回复'></textarea>";
+
+
+
+html +=
+
+"<br><br>";
+
+
+
+html +=
+
+"<button id='btn_"+msg.id+"'>
+
 发送回复
-</button>
 
-</div>
+</button>";
 
-`
+
 
 }
 
 
 
-`;
+div.innerHTML=html;
 
 
 
-
-messageList.appendChild(card);
+list.appendChild(div);
 
 
 
@@ -458,11 +489,15 @@ messageList.appendChild(card);
 if(!msg.reply){
 
 
-card.querySelector("button")
+document
+.getElementById("btn_"+msg.id)
+.onclick=function(){
 
-.onclick=
 
-()=>sendReply(msg.id);
+sendReply(msg.id);
+
+
+};
 
 
 }
@@ -474,6 +509,7 @@ card.querySelector("button")
 
 
 
+
 }
 
 
@@ -482,22 +518,19 @@ card.querySelector("button")
 
 
 
-// 回复
+//发送回复
 
 
 async function sendReply(id){
 
 
 
-const textarea =
-document.getElementById(
-"reply-"+id
-);
+let text =
 
-
-
-const text =
-textarea.value.trim();
+document
+.getElementById("reply_"+id)
+.value
+.trim();
 
 
 
@@ -505,14 +538,7 @@ if(!text)return;
 
 
 
-
-const {
-error
-
-}
-
-=
-await supabase
+const result = await supabase
 
 .from("messages")
 
@@ -532,12 +558,10 @@ id
 
 
 
+if(result.error){
 
 
-if(error){
-
-
-alert(error.message);
+alert(result.error.message);
 
 
 return;
@@ -561,14 +585,32 @@ loadMessages();
 
 
 
-refreshButton.onclick=
+
+function escapeHtml(text){
+
+
+let div=document.createElement("div");
+
+
+div.innerText=text;
+
+
+return div.innerHTML;
+
+
+}
+
+
+
+
+
+refreshBtn.onclick =
 loadMessages;
 
 
 
 
-
-// 自动刷新
+//每5秒刷新
 
 setInterval(
 loadMessages,
