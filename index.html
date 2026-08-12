@@ -48,124 +48,154 @@
   </div>
 
   <!-- 库和脚本放在底部 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    // ====== 配置：替换成你自己的 Supabase 凭证 ======
-    const SUPABASE_URL = 'https://verrithqsanxnhrtwjps.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlcnJpdGhxc2FueG5ocnR3anBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0OTc4MjMsImV4cCI6MjEwMjA3MzgyM30.pm8PZKgNyhQsExsu4vHT3BdbgP8bME8iA7nO8BXvle0';
-    // ================================================
+ // 标准初始化，并使用 try-catch 防止报错阻断程序
+let supabase;
+try {
+    // 直接创建客户端实例
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (err) {
+    console.error("Supabase 初始化失败:", err);
+    // 如果初始化失败，设置一个空对象防止后续代码报错
+    supabase = {};
+}
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    let myMessages = [];
-    let pollTimer = null;
+let myMessages = []; // 存储当前访客发送过的消息ID
+let pollTimer = null;
 
-    async function sendMessage() {
-      const input = document.getElementById('userInput');
-      const nameInput = document.getElementById('userName');
-      const text = input.value.trim();
-      if (!text) return;
+// 发送消息
+async function sendMessage() {
+  // 增加健壮性判断，防止 supabase 未定义时调用
+  if (!supabase.from) {
+    alert('系统配置错误，请检查 Supabase 初始化代码！');
+    return;
+  }
 
-      const userName = nameInput.value.trim() || '匿名访客';
-      
-      addMessageToChat('user', text);
-      input.value = '';
-      document.getElementById('sendBtn').disabled = true;
-      showTypingIndicator();
+  const input = document.getElementById('userInput');
+  const nameInput = document.getElementById('userName');
+  const text = input.value.trim();
+  if (!text) return;
 
-      const { data, error } = await supabase
-        .from('messages')
-        .insert([{ user_name: userName, content: text }])
-        .select();
+  const userName = nameInput.value.trim() || '匿名访客';
+  
+  // 显示在聊天界面
+  addMessageToChat('user', text);
+  input.value = '';
+  document.getElementById('sendBtn').disabled = true;
+  showTypingIndicator();
 
-      if (error) {
-        console.error('发送失败:', error);
-        alert('发送失败，请重试');
-        removeTypingIndicator();
-        document.getElementById('sendBtn').disabled = false;
-        return;
-      }
+  try {
+    // 插入数据库
+    const { data, error } = await supabase
+      .from('messages')
+      .insert([{ user_name: userName, content: text }])
+      .select();
 
-      myMessages.push(data[0].id);
+    if (error) {
+      console.error('发送失败:', error);
+      alert('发送失败，请重试');
       removeTypingIndicator();
       document.getElementById('sendBtn').disabled = false;
-
-      if (!pollTimer) {
-        pollTimer = setInterval(pollReplies, 3000);
-      }
+      return;
     }
 
-    async function pollReplies() {
-      if (myMessages.length === 0) return;
+    // 记录这条消息的ID，用于后续轮询回复
+    myMessages.push(data[0].id);
+    removeTypingIndicator();
+    document.getElementById('sendBtn').disabled = false;
 
-      const { data, error } = await supabase
-        .from('messages')
-        .select('id, reply')
-        .in('id', myMessages)
-        .not('reply', 'is', null);
-
-      if (error || !data) return;
-
-      data.forEach(msg => {
-        if (msg.reply) {
-          addMessageToChat('assistant', msg.reply);
-          myMessages = myMessages.filter(id => id !== msg.id);
-        }
-      });
-
-      if (myMessages.length === 0 && pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
+    // 开始轮询回复
+    if (!pollTimer) {
+      pollTimer = setInterval(pollReplies, 3000);
     }
+  } catch (err) {
+    console.log(err);
+  }
+}
 
-    function addMessageToChat(role, text) {
-      const container = document.getElementById('chatContainer');
-      const div = document.createElement('div');
-      div.className = `message ${role}`;
-      div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
-      container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
-    }
+// 轮询回复
+async function pollReplies() {
+  if (!supabase.from || myMessages.length === 0) return;
 
-    function showTypingIndicator() {
-      const container = document.getElementById('chatContainer');
-      const div = document.createElement('div');
-      div.className = 'message assistant';
-      div.id = 'typingIndicator';
-      div.innerHTML = '<div class="bubble typing">🤖 正在输入...</div>';
-      container.appendChild(div);
-      container.scrollTop = container.scrollHeight;
-    }
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('id, reply')
+      .in('id', myMessages)
+      .not('reply', 'is', null);
 
-    function removeTypingIndicator() {
-      const indicator = document.getElementById('typingIndicator');
-      if (indicator) indicator.remove();
-    }
+    if (error || !data) return;
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    document.getElementById('userInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-
-    window.addEventListener('load', () => {
-      const saved = localStorage.getItem('myMessages');
-      if (saved) {
-        myMessages = JSON.parse(saved);
-        if (myMessages.length > 0) {
-          pollTimer = setInterval(pollReplies, 3000);
-        }
+    data.forEach(msg => {
+      if (msg.reply) {
+        addMessageToChat('assistant', msg.reply);
+        // 从待轮询列表移除
+        myMessages = myMessages.filter(id => id !== msg.id);
       }
     });
 
-    setInterval(() => {
-      localStorage.setItem('myMessages', JSON.stringify(myMessages));
-    }, 5000);
-  </script>
+    // 如果所有消息都有回复了，停止轮询
+    if (myMessages.length === 0 && pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+// UI 辅助函数
+function addMessageToChat(role, text) {
+  const container = document.getElementById('chatContainer');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTypingIndicator() {
+  const container = document.getElementById('chatContainer');
+  const div = document.createElement('div');
+  div.className = 'message assistant';
+  div.id = 'typingIndicator';
+  div.innerHTML = '<div class="bubble typing">🤖 正在输入...</div>';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTypingIndicator() {
+  const indicator = document.getElementById('typingIndicator');
+  if (indicator) indicator.remove();
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// 回车发送
+document.getElementById('userInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+// 页面加载时，如果有历史消息ID存在localStorage，恢复轮询
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('myMessages');
+  if (saved) {
+    myMessages = JSON.parse(saved);
+    if (myMessages.length > 0) {
+      pollTimer = setInterval(pollReplies, 3000);
+    }
+  }
+});
+
+// 保存消息ID到localStorage
+setInterval(() => {
+  localStorage.setItem('myMessages', JSON.stringify(myMessages));
+}, 5000);
+</script>
+
 </body>
+
 </html>
