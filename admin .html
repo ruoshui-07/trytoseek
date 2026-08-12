@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ChatTJB 管理后台</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, sans-serif; background: #f0f0f0; padding: 20px; }
@@ -39,12 +38,16 @@
     </div>
   </div>
 
+  <!-- 库和脚本放在底部 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    // ====== 配置：替换成你自己的 Supabase 凭证 ======
     const SUPABASE_URL = 'https://verrithqsanxnhrtwjps.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlcnJpdGhxc2FueG5ocnR3anBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0OTc4MjMsImV4cCI6MjEwMjA3MzgyM30.pm8PZKgNyhQsExsu4vHT3BdbgP8bME8iA7nO8BXvle0';
     const ADMIN_PASSWORD = 'chattjb-admin'; // 简单口令保护
-    
-    supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // ================================================
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     function adminLogin() {
       const pass = document.getElementById('adminPass').value;
@@ -52,24 +55,17 @@
         document.getElementById('loginArea').style.display = 'none';
         document.getElementById('adminArea').style.display = 'block';
         loadMessages();
-        setInterval(loadMessages, 5000); // 每5秒刷新
+        setInterval(loadMessages, 5000);
       } else {
         alert('口令错误');
       }
     }
 
-    // 由于 RLS 策略限制，匿名用户无法读取未回复消息
-    // 所以我们需要一个特殊的"服务角色"方法来绕过（仅用于演示）
-    // 生产环境建议使用 Edge Function 或自建后端
-    
     async function loadMessages() {
-      // 方法：暂时禁用 RLS 检查，通过 RPC 函数读取
-      const { data, error } = await supabase
-        .rpc('get_pending_messages');
+      const { data, error } = await supabase.rpc('get_pending_messages');
       
       if (error) {
         console.error(error);
-        // 如果 RPC 不存在，fallback 到直接查询（需要关闭 RLS 或调整策略）
         const { data: data2, error: error2 } = await supabase
           .from('messages')
           .select('*')
@@ -92,14 +88,14 @@
       const replied = messages.filter(m => m.reply).length;
       
       document.getElementById('stats').innerHTML = `
-        <strong> 统计：</strong> 待回复 ${pending} 条 | 已回复 ${replied} 条 | 总计 ${messages.length} 条
+        <strong>统计：</strong> 待回复 ${pending} 条 | 已回复 ${replied} 条 | 总计 ${messages.length} 条
       `;
       
       const list = document.getElementById('messageList');
       list.innerHTML = messages.map(m => `
         <div class="message-item ${m.reply ? 'replied' : ''}">
           <div class="message-meta">
-             ${escapeHtml(m.user_name)} |  ${new Date(m.created_at).toLocaleString('zh-CN')}
+            👤 ${escapeHtml(m.user_name)} | 🕐 ${new Date(m.created_at).toLocaleString('zh-CN')}
           </div>
           <div class="message-content">${escapeHtml(m.content)}</div>
           ${m.reply ? `
@@ -135,9 +131,6 @@
       div.textContent = text;
       return div.innerHTML;
     }
-
-    // 快捷回复按钮（可选）
-    const quickReplies = ['有趣哎！！', '能工智人还不会哦', '好问题啊！', '谢谢你愿意和能工智人玩 '];
   </script>
 </body>
 </html>
