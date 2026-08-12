@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>trytossek</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f7f7f8; }
+    .header { text-align: center; padding: 20px; border-bottom: 1px solid #e5e5e5; background: white; }
+    .header h1 { font-size: 24px; color: #202123; }
+    .header p { color: #8e8ea0; font-size: 14px; margin-top: 6px; }
+    .chat-container { max-width: 720px; margin: 0 auto; padding: 20px; }
+    .message { margin-bottom: 20px; display: flex; }
+    .message.user { justify-content: flex-end; }
+    .message.assistant { justify-content: flex-start; }
+    .bubble { max-width: 70%; padding: 12px 16px; border-radius: 18px; line-height: 1.5; }
+    .message.user .bubble { background: #10a37f; color: white; border-bottom-right-radius: 4px; }
+    .message.assistant .bubble { background: white; color: #202123; border: 1px solid #e5e5e5; border-bottom-left-radius: 4px; }
+    .input-area { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e5e5; padding: 16px; }
+    .input-box { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; }
+    .input-box input { flex: 1; padding: 12px 16px; border: 1px solid #d9d9e3; border-radius: 8px; font-size: 16px; outline: none; }
+    .input-box input:focus { border-color: #10a37f; }
+    .input-box button { padding: 12px 24px; background: #10a37f; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    .input-box button:hover { background: #0d8a6a; }
+    .input-box button:disabled { background: #a0a0a0; cursor: not-allowed; }
+    .typing { color: #8e8ea0; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1> trytoseek</h1>
+    <p>由 AI 驱动的领先聊天界面（*AI = Average Individual）</p>
+  </div>
+
+  <div class="chat-container" id="chatContainer">
+    <div class="message assistant">
+      <div class="bubble">你好！我是trytoseek，一个能工智人。问我任何问题，我会亲自回复你 <br><small>（注：能工智人需要休息和睡眠）</small></div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-box">
+      <input type="text" id="userName" placeholder="你的昵称（可选）" style="flex: 0 0 150px;">
+      <input type="text" id="userInput" placeholder="输入消息，回车发送...">
+      <button id="sendBtn" onclick="sendMessage()">发送</button>
+    </div>
+  </div>
+
+  <script>
+    // ====== 配置：替换成你自己的 Supabase 凭证 ======
+    const SUPABASE_URL = 'https://verrithqsanxnhrtwjps.supabase.co/rest/v1/';
+    const SUPABASE_ANON_KEY = 'sb_publishable_Ot7K5Gh7uW18mP_P7A2zpg_bPl4T6iY';
+    // ================================================
+
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    let myMessages = []; // 存储当前访客发送过的消息ID
+    let pollTimer = null;
+
+    // 发送消息
+    async function sendMessage() {
+      const input = document.getElementById('userInput');
+      const nameInput = document.getElementById('userName');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const userName = nameInput.value.trim() || '匿名访客';
+      
+      // 显示在聊天界面
+      addMessageToChat('user', text);
+      input.value = '';
+      document.getElementById('sendBtn').disabled = true;
+      showTypingIndicator();
+
+      // 插入数据库
+      const { data, error } = await supabase
+        .from('messages')
+        .insert([{ user_name: userName, content: text }])
+        .select();
+
+      if (error) {
+        console.error('发送失败:', error);
+        alert('发送失败，请重试');
+        removeTypingIndicator();
+        document.getElementById('sendBtn').disabled = false;
+        return;
+      }
+
+      // 记录这条消息的ID，用于后续轮询回复
+      myMessages.push(data[0].id);
+      removeTypingIndicator();
+      document.getElementById('sendBtn').disabled = false;
+
+      // 开始轮询回复
+      if (!pollTimer) {
+        pollTimer = setInterval(pollReplies, 3000);
+      }
+    }
+
+    // 轮询回复
+    async function pollReplies() {
+      if (myMessages.length === 0) return;
+
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, reply')
+        .in('id', myMessages)
+        .not('reply', 'is', null);
+
+      if (error || !data) return;
+
+      data.forEach(msg => {
+        if (msg.reply) {
+          addMessageToChat('assistant', msg.reply);
+          // 从待轮询列表移除
+          myMessages = myMessages.filter(id => id !== msg.id);
+        }
+      });
+
+      // 如果所有消息都有回复了，停止轮询
+      if (myMessages.length === 0 && pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    // UI 辅助函数
+    function addMessageToChat(role, text) {
+      const container = document.getElementById('chatContainer');
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+      div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+      const container = document.getElementById('chatContainer');
+      const div = document.createElement('div');
+      div.className = 'message assistant';
+      div.id = 'typingIndicator';
+      div.innerHTML = '<div class="bubble typing">🤖 正在输入...</div>';
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 回车发送
+    document.getElementById('userInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    // 页面加载时，如果有历史消息ID存在localStorage，恢复轮询
+    window.addEventListener('load', () => {
+      const saved = localStorage.getItem('myMessages');
+      if (saved) {
+        myMessages = JSON.parse(saved);
+        if (myMessages.length > 0) {
+          pollTimer = setInterval(pollReplies, 3000);
+        }
+      }
+    });
+
+    // 保存消息ID到localStorage
+    setInterval(() => {
+      localStorage.setItem('myMessages', JSON.stringify(myMessages));
+    }, 5000);
+  </script>
+</body>
+</html>
