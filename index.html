@@ -1,199 +1,1533 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>trytossek</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f7f7f8; }
-    .header { text-align: center; padding: 20px; border-bottom: 1px solid #e5e5e5; background: white; }
-    .header h1 { font-size: 24px; color: #202123; }
-    .header p { color: #8e8ea0; font-size: 14px; margin-top: 6px; }
-    .chat-container { max-width: 720px; margin: 0 auto; padding: 20px; }
-    .message { margin-bottom: 20px; display: flex; }
-    .message.user { justify-content: flex-end; }
-    .message.assistant { justify-content: flex-start; }
-    .bubble { max-width: 70%; padding: 12px 16px; border-radius: 18px; line-height: 1.5; }
-    .message.user .bubble { background: #10a37f; color: white; border-bottom-right-radius: 4px; }
-    .message.assistant .bubble { background: white; color: #202123; border: 1px solid #e5e5e5; border-bottom-left-radius: 4px; }
-    .input-area { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e5e5; padding: 16px; }
-    .input-box { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; }
-    .input-box input { flex: 1; padding: 12px 16px; border: 1px solid #d9d9e3; border-radius: 8px; font-size: 16px; outline: none; }
-    .input-box input:focus { border-color: #10a37f; }
-    .input-box button { padding: 12px 24px; background: #10a37f; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
-    .input-box button:hover { background: #0d8a6a; }
-    .input-box button:disabled { background: #a0a0a0; cursor: not-allowed; }
-    .typing { color: #8e8ea0; font-style: italic; }
-  </style>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>trytoseek</title>
+
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+
+body{
+
+    font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+    background:#f7f7f8;
+
+}
+
+
+
+.header{
+
+    text-align:center;
+
+    padding:25px;
+
+    background:white;
+
+    border-bottom:1px solid #eee;
+
+}
+
+
+.header h1{
+
+    font-size:26px;
+
+    color:#202123;
+
+}
+
+
+.header p{
+
+    margin-top:8px;
+
+    color:#888;
+
+}
+
+
+
+.chat-container{
+
+    max-width:720px;
+
+    margin:auto;
+
+    padding:20px;
+
+    padding-bottom:120px;
+
+}
+
+
+
+.message{
+
+    display:flex;
+
+    margin-bottom:20px;
+
+}
+
+
+
+.message.user{
+
+    justify-content:flex-end;
+
+}
+
+
+
+.message.assistant{
+
+    justify-content:flex-start;
+
+}
+
+
+
+.bubble{
+
+    max-width:75%;
+
+    padding:14px 18px;
+
+    border-radius:18px;
+
+    line-height:1.6;
+
+}
+
+
+
+.user .bubble{
+
+    background:#10a37f;
+
+    color:white;
+
+}
+
+
+
+.assistant .bubble{
+
+    background:white;
+
+    border:1px solid #ddd;
+
+}
+
+
+
+.input-area{
+
+    position:fixed;
+
+    bottom:0;
+
+    left:0;
+
+    right:0;
+
+    padding:15px;
+
+    background:white;
+
+    border-top:1px solid #ddd;
+
+}
+
+
+
+.input-box{
+
+    max-width:720px;
+
+    margin:auto;
+
+    display:flex;
+
+    gap:10px;
+
+}
+
+
+
+input{
+
+    padding:12px;
+
+    border-radius:8px;
+
+    border:1px solid #ddd;
+
+    font-size:15px;
+
+}
+
+
+
+#userName{
+
+    width:130px;
+
+}
+
+
+
+#userInput{
+
+    flex:1;
+
+}
+
+
+
+button{
+
+    padding:12px 20px;
+
+    background:#10a37f;
+
+    color:white;
+
+    border:none;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+}
+
+
+button:disabled{
+
+    background:#aaa;
+
+}
+
+
+
+.typing{
+
+    color:#888;
+
+    font-style:italic;
+
+}
+
+
+
+</style>
+
+
 </head>
+
+
+
 <body>
-  <div class="header">
-    <h1>trytoseek</h1>
-    <p>由 AI 驱动的领先聊天界面（*AI = Average Individual）</p>
-  </div>
 
-  <div class="chat-container" id="chatContainer">
-    <div class="message assistant">
-      <div class="bubble">你好！我是trytoseek，一个能工智人。问我任何问题，我会亲自回复你 <br><small>（注：能工智人需要休息和睡眠）</small></div>
-    </div>
-  </div>
 
-  <div class="input-area">
-    <div class="input-box">
-      <input type="text" id="userName" placeholder="你的昵称（可选）" style="flex: 0 0 150px;">
-      <input type="text" id="userInput" placeholder="输入消息，回车发送...">
-      <button id="sendBtn" onclick="sendMessage()">发送</button>
-    </div>
-  </div>
+
+<div class="header">
+
+<h1>trytoseek</h1>
+
+<p>由 AI 驱动的聊天空间（AI = Average Individual）</p>
+
+</div>
+
+
+
+
+<div id="chatContainer" class="chat-container">
+
+
+<div class="message assistant">
+
+<div class="bubble">
+
+你好！我是 trytoseek，一个能工智人。
+
+<br>
+
+<small>
+（注：能工智人需要休息和睡眠）
+</small>
+
+
+</div>
+
+</div>
+
+
+</div>
+
+
+
+
+<div class="input-area">
+
+
+<div class="input-box">
+
+
+<input 
+id="userName"
+placeholder="昵称">
+
+
+<input
+id="userInput"
+placeholder="输入消息，回车发送">
+
+
+<button id="sendBtn">
+发送
+</button>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<!-- Supabase SDK -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+
+
 <script>
-    // 标准初始化，并使用 try-catch 防止报错阻断程序
-    let supabase;
-    try {
-        // 直接创建客户端实例
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    } catch (err) {
-        console.error("Supabase 初始化失败:", err);
-        // 如果初始化失败，设置一个空对象防止后续代码报错
-        supabase = {};
-    }
 
-    let myMessages = []; // 存储当前访客发送过的消息ID
-    let pollTimer = null;
 
-    // 发送消息
-    async function sendMessage() {
-        // 增加健壮性判断，防止 supabase 未定义时调用
-        if (!supabase.from) {
-            alert('系统配置错误，请检查 Supabase 初始化代码！');
-            return;
-        }
+/***************
+ Supabase配置
+****************/
 
-        const input = document.getElementById('userInput');
-        const nameInput = document.getElementById('userName');
-        const text = input.value.trim();
-        if (!text) return;
 
-        const userName = nameInput.value.trim() || '匿名访客';
+const SUPABASE_URL =
+"https://verrithqsanxnhrtwjps.supabase.co";
 
-        // 显示在聊天界面
-        addMessageToChat('user', text);
-        input.value = '';
-        document.getElementById('sendBtn').disabled = true;
-        showTypingIndicator();
 
-        try {
-            // 插入数据库
-            const { data, error } = await supabase
-                .from('messages')
-                .insert([{ user_name: userName, content: text }])
-                .select();
 
-            if (error) {
-                console.error('发送失败:', error);
-                alert('发送失败，请重试');
-                removeTypingIndicator();
-                document.getElementById('sendBtn').disabled = false;
-                return;
-            }
+const SUPABASE_ANON_KEY =
+"<!DOCTYPE html>
+<html lang="zh-CN">
 
-            // 记录这条消息的ID，用于后续轮询回复
-            myMessages.push(data[0].id);
-            removeTypingIndicator();
-            document.getElementById('sendBtn').disabled = false;
+<head>
 
-            // 开始轮询回复
-            if (!pollTimer) {
-                pollTimer = setInterval(pollReplies, 3000);
-            }
-        } catch (err) {
-            console.log(err);
-        }
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    // 轮询回复
-    async function pollReplies() {
-        if (!supabase.from || myMessages.length === 0) return;
+<title>trytoseek</title>
 
-        try {
-            const { data, error } = await supabase
-                .from('messages')
-                .select('id, reply')
-                .in('id', myMessages)
-                .not('reply', 'is', null);
 
-            if (error || !data) return;
+<style>
 
-            data.forEach(msg => {
-                if (msg.reply) {
-                    addMessageToChat('assistant', msg.reply);
-                    // 从待轮询列表移除
-                    myMessages = myMessages.filter(id => id !== msg.id);
-                }
-            });
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
 
-            // 如果所有消息都有回复了，停止轮询
-            if (myMessages.length === 0 && pollTimer) {
-                clearInterval(pollTimer);
-                pollTimer = null;
-            }
-        } catch (err) {
-            console.log(err);
-        }
-    }
 
-    // UI 辅助函数
-    function addMessageToChat(role, text) {
-        const container = document.getElementById('chatContainer');
-        const div = document.createElement('div');
-        div.className = `message ${role}`;
-        div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    }
+body{
 
-    function showTypingIndicator() {
-        const container = document.getElementById('chatContainer');
-        const div = document.createElement('div');
-        div.className = 'message assistant';
-        div.id = 'typingIndicator';
-        div.innerHTML = '<div class="bubble typing">🤖 正在输入...</div>';
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    }
+    font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 
-    function removeTypingIndicator() {
-        const indicator = document.getElementById('typingIndicator');
-        if (indicator) indicator.remove();
-    }
+    background:#f7f7f8;
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+}
 
-    // 回车发送
-    document.getElementById('userInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
 
-    // 页面加载时，如果有历史消息ID存在localStorage，恢复轮询
-    window.addEventListener('load', () => {
-        const saved = localStorage.getItem('myMessages');
-        if (saved) {
-            myMessages = JSON.parse(saved);
-            if (myMessages.length > 0) {
-                pollTimer = setInterval(pollReplies, 3000);
-            }
-        }
-    });
 
-    // 保存消息ID到localStorage
-    setInterval(() => {
-        localStorage.setItem('myMessages', JSON.stringify(myMessages));
-    }, 5000);
+.header{
+
+    text-align:center;
+
+    padding:25px;
+
+    background:white;
+
+    border-bottom:1px solid #eee;
+
+}
+
+
+.header h1{
+
+    font-size:26px;
+
+    color:#202123;
+
+}
+
+
+.header p{
+
+    margin-top:8px;
+
+    color:#888;
+
+}
+
+
+
+.chat-container{
+
+    max-width:720px;
+
+    margin:auto;
+
+    padding:20px;
+
+    padding-bottom:120px;
+
+}
+
+
+
+.message{
+
+    display:flex;
+
+    margin-bottom:20px;
+
+}
+
+
+
+.message.user{
+
+    justify-content:flex-end;
+
+}
+
+
+
+.message.assistant{
+
+    justify-content:flex-start;
+
+}
+
+
+
+.bubble{
+
+    max-width:75%;
+
+    padding:14px 18px;
+
+    border-radius:18px;
+
+    line-height:1.6;
+
+}
+
+
+
+.user .bubble{
+
+    background:#10a37f;
+
+    color:white;
+
+}
+
+
+
+.assistant .bubble{
+
+    background:white;
+
+    border:1px solid #ddd;
+
+}
+
+
+
+.input-area{
+
+    position:fixed;
+
+    bottom:0;
+
+    left:0;
+
+    right:0;
+
+    padding:15px;
+
+    background:white;
+
+    border-top:1px solid #ddd;
+
+}
+
+
+
+.input-box{
+
+    max-width:720px;
+
+    margin:auto;
+
+    display:flex;
+
+    gap:10px;
+
+}
+
+
+
+input{
+
+    padding:12px;
+
+    border-radius:8px;
+
+    border:1px solid #ddd;
+
+    font-size:15px;
+
+}
+
+
+
+#userName{
+
+    width:130px;
+
+}
+
+
+
+#userInput{
+
+    flex:1;
+
+}
+
+
+
+button{
+
+    padding:12px 20px;
+
+    background:#10a37f;
+
+    color:white;
+
+    border:none;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+}
+
+
+button:disabled{
+
+    background:#aaa;
+
+}
+
+
+
+.typing{
+
+    color:#888;
+
+    font-style:italic;
+
+}
+
+
+
+</style>
+
+
+</head>
+
+
+
+<body>
+
+
+
+<div class="header">
+
+<h1>trytoseek</h1>
+
+<p>由 AI 驱动的聊天空间（AI = Average Individual）</p>
+
+</div>
+
+
+
+
+<div id="chatContainer" class="chat-container">
+
+
+<div class="message assistant">
+
+<div class="bubble">
+
+你好！我是 trytoseek，一个能工智人。
+
+<br>
+
+<small>
+（注：能工智人需要休息和睡眠）
+</small>
+
+
+</div>
+
+</div>
+
+
+</div>
+
+
+
+
+<div class="input-area">
+
+
+<div class="input-box">
+
+
+<input 
+id="userName"
+placeholder="昵称">
+
+
+<input
+id="userInput"
+placeholder="输入消息，回车发送">
+
+
+<button id="sendBtn">
+发送
+</button>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<!-- Supabase SDK -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+
+
+
+<script>
+
+
+/***************
+ Supabase配置
+****************/
+
+
+const SUPABASE_URL =
+"https://verrithqsanxnhrtwjps.supabase.co";
+
+
+
+const SUPABASE_ANON_KEY =
+"替换成你的anon key";
+
+
+
+
+
+const supabaseClient =
+window.supabase.createClient(
+
+SUPABASE_URL,
+
+SUPABASE_ANON_KEY
+
+);
+
+
+
+console.log(
+"Supabase初始化成功"
+);
+
+
+
+
+
+
+let myMessages =
+JSON.parse(
+localStorage.getItem("myMessages")
+||"[]"
+);
+
+
+
+let pollTimer=null;
+
+
+
+
+const input =
+document.getElementById(
+"userInput"
+);
+
+
+const nameInput =
+document.getElementById(
+"userName"
+);
+
+
+
+document
+.getElementById("sendBtn")
+.onclick=sendMessage;
+
+
+
+
+input.addEventListener(
+"keypress",
+(e)=>{
+
+if(e.key==="Enter")
+sendMessage();
+
+});
+
+
+
+
+
+
+
+async function sendMessage(){
+
+
+
+let text=input.value.trim();
+
+
+
+if(!text)
+return;
+
+
+
+let username=
+nameInput.value.trim()
+||"匿名访客";
+
+
+
+addMessage(
+"user",
+text
+);
+
+
+
+input.value="";
+
+
+
+showTyping();
+
+
+
+
+const {
+data,
+error
+
+}=await supabaseClient
+
+.from("messages")
+
+.insert([{
+
+user_name:username,
+
+content:text
+
+}])
+
+.select();
+
+
+
+
+
+if(error){
+
+
+console.error(error);
+
+
+alert(
+"发送失败:"+error.message
+);
+
+
+removeTyping();
+
+
+return;
+
+}
+
+
+
+
+myMessages.push(
+data[0].id
+);
+
+
+localStorage.setItem(
+"myMessages",
+JSON.stringify(myMessages)
+);
+
+
+
+if(!pollTimer)
+
+pollTimer=setInterval(
+pollReplies,
+3000
+);
+
+
+
+}
+
+
+
+
+
+
+
+
+async function pollReplies(){
+
+
+
+if(
+myMessages.length===0
+)
+
+return;
+
+
+
+const {
+
+data,
+error
+
+}=await supabaseClient
+
+.from("messages")
+
+.select(
+"id,reply"
+)
+
+.in(
+"id",
+myMessages
+)
+
+.not(
+"reply",
+"is",
+null
+);
+
+
+
+
+if(error)
+return;
+
+
+
+data.forEach(
+msg=>{
+
+
+addMessage(
+"assistant",
+msg.reply
+);
+
+
+
+myMessages =
+myMessages.filter(
+id=>id!==msg.id
+);
+
+
+
+});
+
+
+
+
+localStorage.setItem(
+"myMessages",
+JSON.stringify(myMessages)
+);
+
+
+
+if(
+myMessages.length===0
+){
+
+clearInterval(
+pollTimer
+);
+
+
+pollTimer=null;
+
+
+}
+
+
+}
+
+
+
+
+
+
+
+function addMessage(role,text){
+
+
+const box=
+document.getElementById(
+"chatContainer"
+);
+
+
+
+let div=
+document.createElement(
+"div"
+);
+
+
+
+div.className=
+"message "+role;
+
+
+
+div.innerHTML=
+`
+<div class="bubble">
+${escapeHtml(text)}
+</div>
+`;
+
+
+
+box.appendChild(div);
+
+
+
+window.scrollTo(
+0,
+document.body.scrollHeight
+);
+
+
+
+}
+
+
+
+
+
+function showTyping(){
+
+
+let box=
+document.getElementById(
+"chatContainer"
+);
+
+
+let div=
+document.createElement(
+"div"
+);
+
+
+div.id="typing";
+
+
+div.className=
+"message assistant";
+
+
+div.innerHTML=
+`
+<div class="bubble typing">
+ 正在等待回复...
+</div>
+`;
+
+
+
+box.appendChild(div);
+
+
+}
+
+
+
+function removeTyping(){
+
+
+let t=
+document.getElementById(
+"typing"
+);
+
+
+if(t)
+t.remove();
+
+
+
+}
+
+
+
+
+function escapeHtml(str){
+
+
+let div=
+document.createElement(
+"div"
+);
+
+
+div.textContent=str;
+
+
+return div.innerHTML;
+
+
+}
+
+
+
+
+
+
+if(myMessages.length>0){
+
+
+pollTimer=
+setInterval(
+pollReplies,
+3000
+);
+
+
+}
+
+
+
 </script>
+
+
+
 </body>
+
+
+</html>";
+
+
+
+
+
+const supabaseClient =
+window.supabase.createClient(
+
+SUPABASE_URL,
+
+SUPABASE_ANON_KEY
+
+);
+
+
+
+console.log(
+"Supabase初始化成功"
+);
+
+
+
+
+
+
+let myMessages =
+JSON.parse(
+localStorage.getItem("myMessages")
+||"[]"
+);
+
+
+
+let pollTimer=null;
+
+
+
+
+const input =
+document.getElementById(
+"userInput"
+);
+
+
+const nameInput =
+document.getElementById(
+"userName"
+);
+
+
+
+document
+.getElementById("sendBtn")
+.onclick=sendMessage;
+
+
+
+
+input.addEventListener(
+"keypress",
+(e)=>{
+
+if(e.key==="Enter")
+sendMessage();
+
+});
+
+
+
+
+
+
+
+async function sendMessage(){
+
+
+
+let text=input.value.trim();
+
+
+
+if(!text)
+return;
+
+
+
+let username=
+nameInput.value.trim()
+||"匿名访客";
+
+
+
+addMessage(
+"user",
+text
+);
+
+
+
+input.value="";
+
+
+
+showTyping();
+
+
+
+
+const {
+data,
+error
+
+}=await supabaseClient
+
+.from("messages")
+
+.insert([{
+
+user_name:username,
+
+content:text
+
+}])
+
+.select();
+
+
+
+
+
+if(error){
+
+
+console.error(error);
+
+
+alert(
+"发送失败:"+error.message
+);
+
+
+removeTyping();
+
+
+return;
+
+}
+
+
+
+
+myMessages.push(
+data[0].id
+);
+
+
+localStorage.setItem(
+"myMessages",
+JSON.stringify(myMessages)
+);
+
+
+
+if(!pollTimer)
+
+pollTimer=setInterval(
+pollReplies,
+3000
+);
+
+
+
+}
+
+
+
+
+
+
+
+
+async function pollReplies(){
+
+
+
+if(
+myMessages.length===0
+)
+
+return;
+
+
+
+const {
+
+data,
+error
+
+}=await supabaseClient
+
+.from("messages")
+
+.select(
+"id,reply"
+)
+
+.in(
+"id",
+myMessages
+)
+
+.not(
+"reply",
+"is",
+null
+);
+
+
+
+
+if(error)
+return;
+
+
+
+data.forEach(
+msg=>{
+
+
+addMessage(
+"assistant",
+msg.reply
+);
+
+
+
+myMessages =
+myMessages.filter(
+id=>id!==msg.id
+);
+
+
+
+});
+
+
+
+
+localStorage.setItem(
+"myMessages",
+JSON.stringify(myMessages)
+);
+
+
+
+if(
+myMessages.length===0
+){
+
+clearInterval(
+pollTimer
+);
+
+
+pollTimer=null;
+
+
+}
+
+
+}
+
+
+
+
+
+
+
+function addMessage(role,text){
+
+
+const box=
+document.getElementById(
+"chatContainer"
+);
+
+
+
+let div=
+document.createElement(
+"div"
+);
+
+
+
+div.className=
+"message "+role;
+
+
+
+div.innerHTML=
+`
+<div class="bubble">
+${escapeHtml(text)}
+</div>
+`;
+
+
+
+box.appendChild(div);
+
+
+
+window.scrollTo(
+0,
+document.body.scrollHeight
+);
+
+
+
+}
+
+
+
+
+
+function showTyping(){
+
+
+let box=
+document.getElementById(
+"chatContainer"
+);
+
+
+let div=
+document.createElement(
+"div"
+);
+
+
+div.id="typing";
+
+
+div.className=
+"message assistant";
+
+
+div.innerHTML=
+`
+<div class="bubble typing">
+🤖 正在等待回复...
+</div>
+`;
+
+
+
+box.appendChild(div);
+
+
+}
+
+
+
+function removeTyping(){
+
+
+let t=
+document.getElementById(
+"typing"
+);
+
+
+if(t)
+t.remove();
+
+
+
+}
+
+
+
+
+function escapeHtml(str){
+
+
+let div=
+document.createElement(
+"div"
+);
+
+
+div.textContent=str;
+
+
+return div.innerHTML;
+
+
+}
+
+
+
+
+
+
+if(myMessages.length>0){
+
+
+pollTimer=
+setInterval(
+pollReplies,
+3000
+);
+
+
+}
+
+
+
+</script>
+
+
+
+</body>
+
 
 </html>
