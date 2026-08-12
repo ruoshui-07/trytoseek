@@ -4,16 +4,25 @@
 <meta charset="UTF-8">
 <title>管理员后台</title>
 <style>
-body{font-family:Arial;padding:30px;}
-.card{background:white;padding:15px;margin:10px;box-shadow:0 2px 8px #ddd;}
-button{background:#10a37f;color:white;border:0;padding:8px;cursor:pointer;}
-textarea{width:100%;min-height:60px;margin-top:8px;}
+body{font-family:Arial;padding:30px;max-width:900px;margin:auto;}
+.card{background:white;padding:15px;margin:10px;box-shadow:0 2px 8px #ddd;border-radius:8px;}
+.card p{margin:0 0 8px 0;white-space:pre-wrap;}
+.card .meta{color:#888;font-size:12px;margin-bottom:8px;}
+.card textarea{width:100%;min-height:60px;padding:8px;border:1px solid #ddd;border-radius:4px;resize:vertical;font-family:inherit;}
+.card button{background:#10a37f;color:white;border:0;padding:8px 16px;margin-top:8px;cursor:pointer;border-radius:4px;}
+.card button:hover{opacity:0.9;}
+.card .save-hint{color:#10a37f;font-size:12px;margin-left:10px;opacity:0;}
+#login-area{text-align:center;margin-top:100px;}
+#login-area input{padding:10px;font-size:16px;border:1px solid #ddd;border-radius:8px;margin:10px;}
+#login-area button{padding:10px 30px;font-size:16px;background:#10a37f;color:white;border:0;border-radius:8px;cursor:pointer;}
+.reply-badge{display:inline-block;background:#e8f5e9;color:#10a37f;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:8px;}
 </style>
 </head>
 <body>
+
 <h1>🔐 ChatTJB 管理后台</h1>
 
-<div id="login">
+<div id="login-area">
 <input id="pwd" type="password" placeholder="管理员密码">
 <button onclick="login()">进入</button>
 </div>
@@ -35,10 +44,13 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 // ---------- 管理员密码 ----------
 const PASSWORD = "chattjb-admin";
 
+// ---------- 本地草稿缓存（防止刷新丢失输入） ----------
+let drafts = JSON.parse(localStorage.getItem("adminDrafts") || "{}");
+
 function login() {
-    if (document.querySelector("#pwd").value === PASSWORD) {
-        document.querySelector("#login").style.display = "none";
-        document.querySelector("#app").style.display = "block";
+    if (document.getElementById("pwd").value === PASSWORD) {
+        document.getElementById("login-area").style.display = "none";
+        document.getElementById("app").style.display = "block";
         load();
     } else {
         alert("密码错误");
@@ -52,55 +64,140 @@ async function load() {
         .select("*")
         .order("created_at", { ascending: false });
 
-    const listDiv = document.querySelector("#list");
-    listDiv.innerHTML = ""; // 清空
-
+    const listDiv = document.getElementById("list");
+    
     if (error) {
-        listDiv.textContent = error.message;
+        listDiv.textContent = "加载失败: " + error.message;
         return;
     }
 
-    for (const msg of data) {
+    // 用 DocumentFragment 减少 DOM 操作
+    const fragment = document.createDocumentFragment();
+
+    data.forEach(m => {
         const card = document.createElement("div");
         card.className = "card";
+        card.dataset.id = m.id;
 
-        // 内容段落（安全插入文本）
+        // 元信息（用户名 + 时间）
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const time = new Date(m.created_at).toLocaleString('zh-CN');
+        meta.textContent = `${m.user_name || '匿名'} · ${time}`;
+        if (m.reply) {
+            const badge = document.createElement("span");
+            badge.className = "reply-badge";
+            badge.textContent = "已回复";
+            meta.appendChild(badge);
+        }
+        card.appendChild(meta);
+
+        // 内容
         const contentP = document.createElement("p");
-        contentP.textContent = msg.content;
+        contentP.textContent = m.content;
         card.appendChild(contentP);
 
-        // 回复文本框
+        // 回复文本框（恢复草稿或显示已有回复）
         const replyTA = document.createElement("textarea");
-        replyTA.id = "r" + msg.id;
-        replyTA.textContent = msg.reply || "";
+        replyTA.placeholder = "输入回复内容...";
+        // 优先显示草稿（用户正在打的字），其次显示已保存的回复
+        replyTA.value = drafts[m.id] || m.reply || "";
+        
+        // 监听输入，实时保存草稿到 localStorage
+        replyTA.addEventListener("input", () => {
+            drafts[m.id] = replyTA.value;
+            localStorage.setItem("adminDrafts", JSON.stringify(drafts));
+            // 显示自动保存提示
+            const hint = card.querySelector(".save-hint");
+            if (hint) {
+                hint.textContent = "已自动保存草稿";
+                hint.style.opacity = "1";
+                setTimeout(() => { hint.style.opacity = "0"; }, 2000);
+            }
+        });
         card.appendChild(replyTA);
 
-        // 换行
-        card.appendChild(document.createElement("br"));
-
-        // 回复按钮
+        // 按钮区域
+        const btnArea = document.createElement("div");
+        
         const replyBtn = document.createElement("button");
-        replyBtn.textContent = "回复";
-        replyBtn.onclick = function() { reply(msg.id); };
-        card.appendChild(replyBtn);
+        replyBtn.textContent = m.reply ? "更新回复" : "回复";
+        replyBtn.onclick = () => reply(m.id, replyBtn);
+        btnArea.appendChild(replyBtn);
 
-        listDiv.appendChild(card);
-    }
+        const hint = document.createElement("span");
+        hint.className = "save-hint";
+        hint.textContent = "";
+        btnArea.appendChild(hint);
+
+        card.appendChild(btnArea);
+        fragment.appendChild(card);
+    });
+
+    listDiv.innerHTML = "";
+    listDiv.appendChild(fragment);
 }
 
 // ---------- 回复操作 ----------
-async function reply(id) {
-    const text = document.querySelector("#r" + id).value;
-    await supabaseClient
+async function reply(id, btn) {
+    const ta = document.querySelector(`.card[data-id="${id}"] textarea`);
+    if (!ta) return;
+    
+    const text = ta.value.trim();
+    if (!text) { alert("回复内容不能为空"); return; }
+
+    btn.disabled = true;
+    btn.textContent = "保存中...";
+
+    const { error } = await supabaseClient
         .from("messages")
         .update({ reply: text })
         .eq("id", id);
-    alert("回复成功");
-    load();
+
+    btn.disabled = false;
+
+    if (error) {
+        alert("保存失败: " + error.message);
+        btn.textContent = "重试";
+        return;
+    }
+
+    // 保存成功，清除草稿缓存
+    delete drafts[id];
+    localStorage.setItem("adminDrafts", JSON.stringify(drafts));
+
+    btn.textContent = "✓ 已回复";
+    setTimeout(() => {
+        btn.textContent = "更新回复";
+    }, 2000);
+
+    // 不调用 load()！只更新当前卡片的状态，不重建整个列表
+    // 这样用户在其他文本框中正在打的字不会丢失
 }
 
-// ---------- 自动轮询（每5秒刷新）----------
-setInterval(load, 5000);
+// ---------- 轮询策略优化 ----------
+// 不在轮询时重建 DOM，只做静默检查是否有新消息
+let lastCount = 0;
+async function silentCheck() {
+    const { count } = await supabaseClient
+        .from("messages")
+        .select("*", { count: "exact", head: true });
+    
+    if (count > lastCount) {
+        lastCount = count;
+        // 有新消息才刷新列表
+        load();
+    }
+}
+
+// 首次加载后记录数量
+load().then(() => {
+    supabaseClient.from("messages").select("*", { count: "exact", head: true })
+        .then(({ count }) => { lastCount = count || 0; });
+});
+
+// 每10秒静默检查新消息（不再每5秒强制刷新）
+setInterval(silentCheck, 10000);
 </script>
 </body>
 </html>
