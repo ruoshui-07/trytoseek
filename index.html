@@ -1,177 +1,78 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-
 <meta charset="UTF-8">
-
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>trytoseek</title>
-
 <style>
-
-body{
-font-family:Arial;
-background:#f7f7f8;
-}
-
-.box{
-max-width:700px;
-margin:auto;
-}
-
-.msg{
-padding:12px;
-margin:10px;
-border-radius:15px;
-}
-
-.user{
-background:#10a37f;
-color:white;
-text-align:right;
-}
-
-.ai{
-background:white;
-}
-
-.input{
-position:fixed;
-bottom:20px;
-width:80%;
-}
-
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7f7f8;margin:0}
+.header{text-align:center;background:white;padding:20px;border-bottom:1px solid #eee}
+.chat{max-width:720px;margin:auto;padding:20px 20px 120px}
+.msg{display:flex;margin-bottom:16px}
+.user{justify-content:flex-end}.assistant{justify-content:flex-start}
+.bubble{padding:12px 16px;border-radius:16px;max-width:75%;line-height:1.5}
+.user .bubble{background:#10a37f;color:white}.assistant .bubble{background:white;border:1px solid #ddd}
+.input{position:fixed;bottom:0;left:0;right:0;background:white;padding:15px;display:flex;gap:8px}
+.input input{padding:10px;border:1px solid #ddd;border-radius:8px}
+#text{flex:1}button{background:#10a37f;color:white;border:0;border-radius:8px;padding:10px 20px}
 </style>
-
 </head>
-
-
 <body>
-
-
-<div class="box" id="chat">
-
-<div class="msg ai">
-你好，我是trytoseek
+<div class="header"><h2>trytoseek</h2><p>由 AI 驱动的聊天空间</p></div>
+<div id="chat" class="chat">
+<div class="msg assistant"><div class="bubble">你好！我是 trytoseek，一个能工智人。</div></div>
+</div>
+<div class="input">
+<input id="name" placeholder="昵称">
+<input id="text" placeholder="输入消息">
+<button id="send">发送</button>
 </div>
 
-</div>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+const URL="https://verrithqsanxnhrtwjps.supabase.co";
+const KEY="替换成你的anon key";
+const db=createClient(URL,KEY);
 
-<input id="text"
-placeholder="输入消息">
+let ids=JSON.parse(localStorage.getItem("ids")||"[]");
 
-
-<button onclick="send()">
-发送
-</button>
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script src="supabase.js"></script>
-
-
-
-<script>
-
-
-let uid=
-localStorage.getItem("uid");
-
-
-if(!uid){
-
-uid=crypto.randomUUID();
-
-localStorage.setItem(
-"uid",
-uid
-);
-
+function add(role,t){
+ let d=document.createElement("div");
+ d.className="msg "+role;
+ d.innerHTML=`<div class="bubble">${escape(t)}</div>`;
+ document.getElementById("chat").appendChild(d);
+ window.scrollTo(0,document.body.scrollHeight);
 }
 
-
-
-
-function add(type,text){
-
-let div=document.createElement("div");
-
-div.className="msg "+type;
-
-div.innerText=text;
-
-
-document.querySelector("#chat")
-.appendChild(div);
-
+function escape(t){
+ let e=document.createElement("div");e.textContent=t;return e.innerHTML;
 }
-
-
-
 
 async function send(){
-
-
-let input=
-document.querySelector("#text");
-
-
-let text=input.value.trim();
-
-
-if(!text)return;
-
-
-add(
-"user",
-text
-);
-
-
-input.value="";
-
-
-
-let {data,error}=
-
-await supabaseClient
-.from("messages")
-.insert({
-
-id:crypto.randomUUID(),
-
-user_id:uid,
-
-user_name:"访客",
-
-content:text
-
-})
-.select();
-
-
-
-if(error){
-
-console.log(error);
-
-alert(error.message);
-
+ let text=document.getElementById("text").value.trim();
+ if(!text)return;
+ let name=document.getElementById("name").value.trim()||"匿名访客";
+ add("user",text);
+ document.getElementById("text").value="";
+ const {data,error}=await db.from("messages").insert([{user_name:name,content:text}]).select();
+ if(error){alert(error.message);return;}
+ ids.push(data[0].id);
+ localStorage.setItem("ids",JSON.stringify(ids));
 }
 
-
-
+async function poll(){
+ if(!ids.length)return;
+ const {data}=await db.from("messages").select("id,reply").in("id",ids).not("reply","is",null);
+ data?.forEach(x=>{
+   add("assistant",x.reply);
+   ids=ids.filter(i=>i!==x.id);
+   localStorage.setItem("ids",JSON.stringify(ids));
+ });
 }
 
-
-
+document.getElementById("send").onclick=send;
+document.getElementById("text").onkeydown=e=>{if(e.key==="Enter")send()};
+setInterval(poll,3000);
 </script>
-
-
 </body>
-
-
-</html>
